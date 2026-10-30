@@ -207,6 +207,90 @@ if (finePointer && !reducedMotion) {
 }
 
 /* ── Gallery lightbox ─────────────────────────────────────── */
+(function researchMarquee() {
+  const shell = $(".research-marquee-shell");
+  const marquee = $(".research-marquee");
+  const track = $(".research-track");
+  const sequence = $(".research-sequence");
+  if (!shell || !marquee || !track || !sequence) return;
+
+  const clone = sequence.cloneNode(true);
+  clone.classList.add("research-sequence--clone");
+  clone.setAttribute("aria-hidden", "true");
+  clone.querySelectorAll(".reveal, .reveal-left, .reveal-right, .reveal-zoom, .tilt")
+    .forEach((card) => card.classList.remove("reveal", "reveal-left", "reveal-right", "reveal-zoom", "tilt"));
+  track.append(clone);
+
+  const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let hovered = false;
+  let focused = false;
+  let interacting = false;
+  let lastFrame = 0;
+  let resumeTimer;
+  let animationFrame = 0;
+
+  function isPaused() {
+    return hovered || focused || interacting || document.hidden || motionPreference.matches;
+  }
+  function animate(timestamp) {
+    if (!lastFrame) lastFrame = timestamp;
+    const elapsed = Math.min(timestamp - lastFrame, 64);
+    lastFrame = timestamp;
+    const loopLength = sequence.scrollWidth;
+    if (!isPaused() && loopLength > 0) {
+      marquee.scrollLeft = (marquee.scrollLeft + elapsed * 0.045) % loopLength;
+    }
+    animationFrame = requestAnimationFrame(animate);
+  }
+  function start() {
+    if (!motionPreference.matches && !animationFrame) {
+      animationFrame = requestAnimationFrame(animate);
+    }
+  }
+
+  shell.addEventListener("pointerenter", () => { hovered = true; });
+  shell.addEventListener("pointerleave", () => { hovered = false; });
+  shell.addEventListener("focusin", () => { focused = true; });
+  shell.addEventListener("focusout", (event) => {
+    focused = shell.contains(event.relatedTarget);
+  });
+  shell.addEventListener("pointerdown", () => {
+    interacting = true;
+    clearTimeout(resumeTimer);
+  });
+  ["pointerup", "pointercancel"].forEach((eventName) => {
+    shell.addEventListener(eventName, () => {
+      clearTimeout(resumeTimer);
+      resumeTimer = setTimeout(() => { interacting = false; }, 1200);
+    });
+  });
+  shell.querySelectorAll(".marquee-arrow").forEach((button) => {
+    button.addEventListener("click", () => {
+      const card = sequence.firstElementChild;
+      if (!card) return;
+      const gap = Number.parseFloat(getComputedStyle(sequence).gap) || 0;
+      const direction = button.classList.contains("marquee-arrow--prev") ? -1 : 1;
+      const loopLength = sequence.scrollWidth;
+      const target = (marquee.scrollLeft + direction * (card.getBoundingClientRect().width + gap) + loopLength) % loopLength;
+      interacting = true;
+      clearTimeout(resumeTimer);
+      marquee.scrollTo({ left: target, behavior: motionPreference.matches ? "auto" : "smooth" });
+      resumeTimer = setTimeout(() => { interacting = false; }, 1200);
+    });
+  });
+  document.addEventListener("visibilitychange", () => { lastFrame = 0; });
+  motionPreference.addEventListener("change", () => {
+    lastFrame = 0;
+    if (motionPreference.matches) {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = 0;
+    } else {
+      start();
+    }
+  });
+  start();
+})();
+
 (function lightbox() {
   const lb = $("#lightbox");
   const img = $("#lb-img");
@@ -276,50 +360,181 @@ if (finePointer && !reducedMotion) {
     figure.append(photo, caption);
     gallery.append(figure);
   });
-  const certificateCollection = [
-    ["Central University of Karanataka 21 Days Online Training Programme using QGIS Certificate_page-0001.jpg", "21-Day Online GIS Training Using QGIS · Central University of Karnataka"],
-    ["Certificate JNU Conference October 6-7 2025_page-0001.jpg", "JNU International Conference · Poster Presentation · 2025"],
-    ["Certificate of conference.jpg", "Geospatial Innovations for Biodiversity Conservation · Kalindi College"],
-    ["GBU Certificate Atmospheric Science webinar_page-0001.jpg", "Atmospheric Processes and Computational Mathematics Workshop · GBU"],
-    ["GSI Certificate Online Course Basics of Geomorphology.jpg", "Basics of Geomorphology · Geological Survey of India"],
-    ["Image (1).png (2).jpg", "Overview of Planetary Geosciences: The Moon and Mars · IIRS"],
-    ["Image (1).png (3).jpg", "Geoinformatics in Ecological Studies · IIRS"],
-    ["Image (1).png (4).jpg", "Basic Principles of Remote Sensing Technology · IIRS"],
-    ["Image (1).png (5).jpg", "Remote Sensing and GIS Applications · IIRS"],
-    ["Image (1).png (6).jpg", "Computer Applications Diploma · SAMTECH"],
-    ["Image (1).png (7).jpg", "Adventure Education Camp · Climb Up"],
-    ["IMG-20260403-WA0000.jpg", "Volunteer Internship Completion · Suvidha Foundation · 2026"],
-    ["IMG_20260324_195640273~2.jpg", "HR Professional Appreciation · Vriti 2026 Job Fair"],
-    ["Module 3_page-0001.jpg", "Data Management, Statistical Methods, Data Analysis and QC · INCOIS"],
-    ["Module 4_page-0001.jpg", "Visualization of Oceanographic Data Using Open-Source Tools · INCOIS"],
-    ["NDMI Certificate on National Training Programme on Earthquake_page-0001.jpg", "Earthquake Risk Mitigation · NIDM and NEHU"],
-  ];
-  const certificateGallery = $(".certificate-gallery");
-  certificateCollection.forEach(([file, title]) => {
-    const figure = document.createElement("figure");
-    figure.className = "g-item certificate-item";
-    figure.tabIndex = 0;
-    figure.setAttribute("role", "button");
-    figure.setAttribute("aria-label", `View certificate: ${title}`);
-    const certificate = document.createElement("img");
-    certificate.src = `Certificates/${encodeURIComponent(file)}`;
-    certificate.alt = title;
-    certificate.loading = "lazy";
-    certificate.decoding = "async";
-    const caption = document.createElement("figcaption");
-    const heading = document.createElement("b");
-    heading.textContent = title;
-    caption.append(heading);
-    figure.append(certificate, caption);
-    certificateGallery.append(figure);
+  const galleryTrack = $(".gallery-track");
+  const galleryClone = gallery.cloneNode(true);
+  galleryClone.classList.add("gallery-sequence--clone");
+  galleryClone.setAttribute("aria-hidden", "true");
+  galleryClone.querySelectorAll(".g-item").forEach((figure) => {
+    figure.classList.remove("reveal", "reveal-zoom");
+    figure.removeAttribute("role");
+    figure.removeAttribute("tabindex");
+    figure.removeAttribute("aria-label");
   });
-  const items = $$(".g-item");
-  const sources = items.map((f) => ({
-    src: f.querySelector("img").src,
-    alt: f.querySelector("img").alt,
-    cap: f.querySelector("figcaption")?.innerText || "",
+  galleryClone.querySelectorAll("img").forEach((photo) => { photo.alt = ""; });
+  galleryTrack.append(galleryClone);
+  const galleryPhotos = [...gallery.querySelectorAll("img")];
+  const clonedPhotos = [...galleryClone.querySelectorAll("img")];
+  const photoPairs = galleryPhotos.map((photo, index) => [photo, clonedPhotos[index]]);
+  function sizePhotoCards() {
+    const maxWidth = window.matchMedia("(max-width: 380px)").matches ? 205
+      : window.matchMedia("(max-width: 640px)").matches ? 270
+        : window.matchMedia("(max-width: 900px)").matches ? 330 : 390;
+    const maxHeight = window.matchMedia("(max-width: 640px)").matches ? 220
+      : window.matchMedia("(max-width: 900px)").matches ? 270 : 310;
+    photoPairs.forEach(([photo, clone]) => {
+      if (!photo.naturalWidth || !photo.naturalHeight) return;
+      const scale = Math.min(maxWidth / photo.naturalWidth, maxHeight / photo.naturalHeight);
+      const width = Math.round(photo.naturalWidth * scale);
+      const height = Math.round(photo.naturalHeight * scale);
+      const portrait = photo.naturalHeight > photo.naturalWidth * 1.1;
+      [photo, clone].forEach((image) => {
+        const card = image.closest(".g-item");
+        card.style.setProperty("--photo-width", `${width}px`);
+        card.style.setProperty("--photo-height", `${height}px`);
+        card.classList.toggle("g-item--portrait", portrait);
+      });
+    });
+  }
+  galleryPhotos.forEach((photo) => {
+    if (!photo.complete) photo.addEventListener("load", sizePhotoCards, { once: true });
+  });
+  window.addEventListener("resize", sizePhotoCards, { passive: true });
+  sizePhotoCards();
+
+  const shell = $(".gallery-marquee-shell");
+  const marquee = $(".gallery-marquee");
+  const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let hovered = false;
+  let focused = false;
+  let interacting = false;
+  let lastFrame = 0;
+  let resumeTimer;
+  let animationFrame;
+
+  function isMarqueePaused() {
+    return hovered || focused || interacting || document.hidden || motionPreference.matches ||
+      $("#lightbox").classList.contains("open");
+  }
+  function animateMarquee(timestamp) {
+    if (!lastFrame) lastFrame = timestamp;
+    const elapsed = Math.min(timestamp - lastFrame, 64);
+    lastFrame = timestamp;
+    const loopLength = gallery.scrollWidth;
+    if (!isMarqueePaused() && loopLength > 0) {
+      marquee.scrollLeft = (marquee.scrollLeft + elapsed * 0.055) % loopLength;
+    }
+    animationFrame = requestAnimationFrame(animateMarquee);
+  }
+  function startMarquee() {
+    if (!motionPreference.matches && !animationFrame) {
+      animationFrame = requestAnimationFrame(animateMarquee);
+    }
+  }
+  shell.addEventListener("pointerenter", () => { hovered = true; });
+  shell.addEventListener("pointerleave", () => { hovered = false; });
+  shell.addEventListener("focusin", () => { focused = true; });
+  shell.addEventListener("focusout", (event) => {
+    focused = shell.contains(event.relatedTarget);
+  });
+  shell.addEventListener("pointerdown", () => {
+    interacting = true;
+    clearTimeout(resumeTimer);
+  });
+  ["pointerup", "pointercancel"].forEach((eventName) => {
+    shell.addEventListener(eventName, () => {
+      clearTimeout(resumeTimer);
+      resumeTimer = setTimeout(() => { interacting = false; }, 1400);
+    });
+  });
+  shell.querySelectorAll(".marquee-arrow").forEach((button) => {
+    button.addEventListener("click", () => {
+      const card = gallery.firstElementChild;
+      if (!card) return;
+      const gap = Number.parseFloat(getComputedStyle(gallery).gap) || 0;
+      const direction = button.classList.contains("marquee-arrow--prev") ? -1 : 1;
+      const loopLength = gallery.scrollWidth;
+      const target = (marquee.scrollLeft + direction * (card.getBoundingClientRect().width + gap) + loopLength) % loopLength;
+      interacting = true;
+      clearTimeout(resumeTimer);
+      marquee.scrollTo({ left: target, behavior: motionPreference.matches ? "auto" : "smooth" });
+      resumeTimer = setTimeout(() => { interacting = false; }, 1400);
+    });
+  });
+  document.addEventListener("visibilitychange", () => { lastFrame = 0; });
+  motionPreference.addEventListener("change", () => {
+    lastFrame = 0;
+    if (motionPreference.matches) {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = 0;
+    } else {
+      startMarquee();
+    }
+  });
+  startMarquee();
+
+  const certificateCollection = [
+    ["Central University of Karanataka 21 Days Online Training Programme using QGIS Certificate_page-0001.jpg", "21-Day Online GIS Training Using QGIS · Central University of Karnataka", "2020"],
+    ["Certificate JNU Conference October 6-7 2025_page-0001.jpg", "JNU International Conference · Poster Presentation", "2025"],
+    ["Certificate of conference.jpg", "DU International Conference · Oral Presentation", "2025"],
+    ["GBU Certificate Atmospheric Science webinar_page-0001.jpg", "Atmospheric Processes and Computational Mathematics Workshop · GBU", "2020"],
+    ["GSI Certificate Online Course Basics of Geomorphology.jpg", "Basics of Geomorphology · Geological Survey of India", "2021"],
+    ["Image (1).png (2).jpg", "Overview of Planetary Geosciences: The Moon and Mars · IIRS", "2020"],
+    ["Image (1).png (3).jpg", "Geoinformatics in Ecological Studies · IIRS", "2020"],
+    ["Image (1).png (4).jpg", "Basic Principles of Remote Sensing Technology · IIRS", "2020"],
+    ["Image (1).png (5).jpg", "Remote Sensing and GIS Applications · IIRS", "2020"],
+    ["Image (1).png (6).jpg", "Computer Applications Diploma · SAMTECH", "2017"],
+    ["Image (1).png (7).jpg", "Adventure Education Camp · Climb Up", "2014"],
+    ["IMG-20260403-WA0000.jpg", "Volunteer Internship Completion · Suvidha Foundation", "2026"],
+    ["IMG_20260324_195640273~2.jpg", "HR Professional Appreciation · Vriti Job Fair", "2026"],
+    ["Module 3_page-0001.jpg", "Data Management, Statistical Methods, Data Analysis and QC · INCOIS", "2026"],
+    ["Module 4_page-0001.jpg", "Visualization of Oceanographic Data Using Open-Source Tools · INCOIS", "2026"],
+    ["NDMI Certificate on National Training Programme on Earthquake_page-0001.jpg", "Earthquake Risk Mitigation · NIDM and NEHU", "2020"],
+  ];
+  certificateCollection.sort((a, b) => Number(a[2]) - Number(b[2]));
+  const certificateSources = certificateCollection.map(([file, title, year]) => ({
+    src: `Certificates/${encodeURIComponent(file)}`,
+    alt: title,
+    cap: `${title} · ${year}`,
+    year,
   }));
+  const photoItems = [...gallery.querySelectorAll(".g-item")];
+  const certificateCards = $(".certificate-cards");
+  const certificateButtons = certificateSources.map((certificate) => {
+    const button = document.createElement("button");
+    button.className = "certificate-card";
+    button.type = "button";
+    button.setAttribute("aria-label", `Certificate details: ${certificate.alt}`);
+    const icon = document.createElement("span");
+    icon.className = "certificate-card-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M7 3.75h7l4 4v12.5H7a2 2 0 0 1-2-2v-12.5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 4v4h4M8.5 12h7M8.5 15.5h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+    const title = document.createElement("span");
+    title.className = "certificate-card-title";
+    title.textContent = certificate.alt;
+    const year = document.createElement("span");
+    year.className = "certificate-card-year";
+    year.textContent = certificate.year;
+    const action = document.createElement("span");
+    action.className = "certificate-card-action";
+    action.innerHTML = 'View <span aria-hidden="true">→</span>';
+    button.append(icon, title, year, action);
+    certificateCards.append(button);
+    return button;
+  });
+  certificateButtons.forEach((button, index) => {
+    button.addEventListener("click", () => open(photoItems.length + index, button));
+  });
+
+  const sources = [
+    ...photoItems.map((f) => ({
+      src: f.querySelector("img").src,
+      alt: f.querySelector("img").alt,
+      cap: f.querySelector("figcaption")?.innerText || "",
+    })),
+    ...certificateSources,
+  ];
   let idx = 0;
+  let returnFocus;
 
   function show(i) {
     idx = (i + sources.length) % sources.length;
@@ -327,19 +542,31 @@ if (finePointer && !reducedMotion) {
     img.alt = sources[idx].alt;
     cap.textContent = sources[idx].cap.replace(/\n/g, " · ");
   }
-  function open(i) { show(i); lb.classList.add("open"); lb.setAttribute("aria-hidden", "false"); }
-  function close() { lb.classList.remove("open"); lb.setAttribute("aria-hidden", "true"); }
+  function open(i, trigger) {
+    returnFocus = trigger;
+    show(i);
+    lb.classList.add("open");
+    lb.setAttribute("aria-hidden", "false");
+    $(".lb-close").focus();
+  }
+  function close() {
+    lb.classList.remove("open");
+    lb.setAttribute("aria-hidden", "true");
+    if (returnFocus) returnFocus.focus();
+  }
 
-  items.forEach((f, i) => {
-    f.addEventListener("click", () => open(i));
-    if (f.classList.contains("certificate-item")) {
-      f.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          open(i);
-        }
-      });
-    }
+  photoItems.forEach((f, i) => {
+    const title = f.querySelector("img").alt;
+    f.tabIndex = 0;
+    f.setAttribute("role", "button");
+    f.setAttribute("aria-label", `View image: ${title}`);
+    f.addEventListener("click", () => open(i, f));
+    f.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        open(i, f);
+      }
+    });
   });
   $(".lb-close").addEventListener("click", close);
   $(".lb-prev").addEventListener("click", (e) => { e.stopPropagation(); show(idx - 1); });

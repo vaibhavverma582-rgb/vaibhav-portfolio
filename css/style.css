@@ -193,6 +193,15 @@ html[data-theme="dark"] .cursor-ring { border-color: rgba(111, 183, 217, 0.55); 
   background: rgba(255, 255, 255, 0.08);
 }
 #navbar.on-hero #hamburger span { background: #fff; }
+#navbar.menu-open .nav-link { color: var(--muted); }
+#navbar.menu-open .nav-link:hover,
+#navbar.menu-open .nav-link.active { color: var(--txt); }
+#navbar.menu-open .icon-btn {
+  color: var(--txt);
+  border-color: var(--card-brd);
+  background: var(--card);
+}
+#navbar.menu-open #hamburger span { background: var(--txt); }
 
 .nav-wrap { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 
@@ -1094,13 +1103,18 @@ html.js .in { opacity: 1; transform: none; }
 }
 
 @media (max-width: 860px) {
+  #navbar.menu-open {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
   .nav-links {
     position: fixed; top: 0; right: 0; bottom: 0; z-index: 940;
     flex-direction: column; justify-content: center; align-items: center; gap: 8px;
     width: min(320px, 80vw);
-    background: var(--nav-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--bg);
+    box-shadow: -18px 0 42px rgba(22, 50, 79, 0.16);
     border-left: 1px solid var(--card-brd);
     transform: translateX(100%);
     transition: transform 0.5s var(--ease);

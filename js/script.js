@@ -89,7 +89,9 @@ const progressBar = $("#progress-bar");
 const toTop = $("#toTop");
 const heroSection = $("#home");
 let heroHeight = heroSection ? heroSection.offsetHeight : 0;
-window.addEventListener("resize", () => { heroHeight = heroSection.offsetHeight; });
+if (heroSection) {
+  window.addEventListener("resize", () => { heroHeight = heroSection.offsetHeight; });
+}
 
 window.addEventListener("scroll", () => {
   const y = window.scrollY;
@@ -106,29 +108,19 @@ navbar.classList.toggle("on-hero", window.scrollY <= 40 && window.scrollY < hero
 
 /* ── Active nav link ──────────────────────────────────────── */
 const navLinks = $$(".nav-link");
-const sectionByLink = new Map(
-  navLinks.map((l) => [$(l.getAttribute("href")), l])
-);
-const sectionObserver = new IntersectionObserver((entries) => {
-  entries.forEach((en) => {
-    if (en.isIntersecting) {
-      navLinks.forEach((l) => l.classList.remove("active"));
-      sectionByLink.get(en.target)?.classList.add("active");
-    }
-  });
-}, { rootMargin: "-40% 0px -55% 0px" });
-sectionByLink.forEach((_, sec) => sec && sectionObserver.observe(sec));
 
 /* ── Mobile menu ──────────────────────────────────────────── */
 const hamburger = $("#hamburger");
 const navPanel = $("#nav-links");
 hamburger.addEventListener("click", () => {
   const open = navPanel.classList.toggle("open");
+  navbar.classList.toggle("menu-open", open);
   hamburger.classList.toggle("open", open);
   hamburger.setAttribute("aria-expanded", String(open));
 });
 navLinks.forEach((l) => l.addEventListener("click", () => {
   navPanel.classList.remove("open");
+  navbar.classList.remove("menu-open");
   hamburger.classList.remove("open");
   hamburger.setAttribute("aria-expanded", "false");
 }));
@@ -295,6 +287,8 @@ if (finePointer && !reducedMotion) {
   const lb = $("#lightbox");
   const img = $("#lb-img");
   const cap = $("#lb-cap");
+  const gallery = $(".gallery-grid");
+  let photoItems = [];
   const photoCollection = [
     ["1759894941779_Firefly 20251008091218.png.jpg.png", "JNU International Conference 2025"],
     ["AT DU CONFERENCE.jpg", "At the Delhi University Conference"],
@@ -344,7 +338,7 @@ if (finePointer && !reducedMotion) {
     ["Tree Plantation Dr. Raghunath Pal, Dr. Deepak Katariya and Dr. Moin Khan.jpg", "Tree Plantation with Dr. Raghunath Pal, Dr. Deepak Katariya and Dr. Moin Khan"],
     ["Water Quality Analysis of Mahanadi River, Cuttack District, Odisha.jpg", "Water Quality Analysis · Mahanadi River, Odisha"],
   ];
-  const gallery = $(".gallery-grid");
+  if (gallery) {
   photoCollection.forEach(([file, title]) => {
     const figure = document.createElement("figure");
     figure.className = "g-item";
@@ -360,6 +354,7 @@ if (finePointer && !reducedMotion) {
     figure.append(photo, caption);
     gallery.append(figure);
   });
+  photoItems = [...gallery.querySelectorAll(".g-item")];
   const galleryTrack = $(".gallery-track");
   const galleryClone = gallery.cloneNode(true);
   galleryClone.classList.add("gallery-sequence--clone");
@@ -471,6 +466,7 @@ if (finePointer && !reducedMotion) {
     }
   });
   startMarquee();
+  }
 
   const certificateCollection = [
     ["Central University of Karanataka 21 Days Online Training Programme using QGIS Certificate_page-0001.jpg", "21-Day Online GIS Training Using QGIS · Central University of Karnataka", "2020"],
@@ -497,9 +493,8 @@ if (finePointer && !reducedMotion) {
     cap: `${title} · ${year}`,
     year,
   }));
-  const photoItems = [...gallery.querySelectorAll(".g-item")];
   const certificateCards = $(".certificate-cards");
-  const certificateButtons = certificateSources.map((certificate) => {
+  const certificateButtons = certificateCards ? certificateSources.map((certificate) => {
     const button = document.createElement("button");
     button.className = "certificate-card";
     button.type = "button";
@@ -520,7 +515,7 @@ if (finePointer && !reducedMotion) {
     button.append(icon, title, year, action);
     certificateCards.append(button);
     return button;
-  });
+  }) : [];
   certificateButtons.forEach((button, index) => {
     button.addEventListener("click", () => open(photoItems.length + index, button));
   });
@@ -581,7 +576,7 @@ if (finePointer && !reducedMotion) {
 })();
 
 /* ── Contact form → mailto compose ────────────────────────── */
-$("#contact-form").addEventListener("submit", (e) => {
+$("#contact-form")?.addEventListener("submit", (e) => {
   e.preventDefault();
   const name = $("#f-name").value.trim();
   const email = $("#f-email").value.trim();

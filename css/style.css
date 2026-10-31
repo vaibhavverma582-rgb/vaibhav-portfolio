@@ -693,10 +693,10 @@ html[data-theme="dark"] .bar { background: rgba(140, 180, 215, 0.12); }
   -webkit-overflow-scrolling: touch;
   outline-offset: -3px;
 }
-.research-marquee { padding-block: 16px 20px; margin-block: -16px -20px; }
+.research-marquee { padding-block: 16px 20px; margin-block: -16px -20px; overflow-anchor: none; }
 .research-marquee::-webkit-scrollbar { display: none; }
 .research-marquee:focus-visible { outline: 2px solid var(--cyan); }
-.research-track { display: flex; width: max-content; }
+.research-track { display: flex; gap: 14px; width: max-content; }
 .research-sequence {
   display: flex;
   flex: 0 0 auto;
@@ -808,6 +808,7 @@ html[data-theme="dark"] .bar { background: rgba(140, 180, 215, 0.12); }
   -webkit-overflow-scrolling: touch;
   scroll-behavior: auto;
   outline-offset: -4px;
+  overflow-anchor: none;
 }
 .gallery-block + .gallery-block { margin-top: 34px; }
 .gallery-section .marquee-label {

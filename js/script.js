@@ -219,15 +219,14 @@ if (finePointer && !reducedMotion) {
       track.append(clone);
     }
 
-    let hovered = false;
-    let focused = false;
-    let interacting = false;
+    let lastInteraction = 0;
     let lastFrame = 0;
-    let resumeTimer;
     let animationFrame = 0;
+    const INTERACTION_HOLD = 800;
 
     function isPaused() {
-      return hovered || focused || interacting || document.hidden || motionPreference.matches;
+      return document.hidden || motionPreference.matches ||
+        performance.now() - lastInteraction < INTERACTION_HOLD;
     }
     function animate(timestamp) {
       if (!lastFrame) lastFrame = timestamp;
@@ -245,21 +244,9 @@ if (finePointer && !reducedMotion) {
       }
     }
 
-    shell.addEventListener("pointerenter", () => { hovered = true; });
-    shell.addEventListener("pointerleave", () => { hovered = false; });
-    shell.addEventListener("focusin", () => { focused = true; });
-    shell.addEventListener("focusout", (event) => {
-      focused = shell.contains(event.relatedTarget);
-    });
-    shell.addEventListener("pointerdown", () => {
-      interacting = true;
-      clearTimeout(resumeTimer);
-    });
+    shell.addEventListener("pointerdown", () => { lastInteraction = performance.now(); });
     ["pointerup", "pointercancel"].forEach((eventName) => {
-      shell.addEventListener(eventName, () => {
-        clearTimeout(resumeTimer);
-        resumeTimer = setTimeout(() => { interacting = false; }, 1200);
-      });
+      shell.addEventListener(eventName, () => { lastInteraction = performance.now(); });
     });
     shell.querySelectorAll(".marquee-arrow").forEach((button) => {
       button.addEventListener("click", () => {
@@ -269,11 +256,10 @@ if (finePointer && !reducedMotion) {
         const direction = button.classList.contains("marquee-arrow--prev") ? -1 : 1;
         const loop = sequence.scrollWidth;
         const target = (marquee.scrollLeft + direction * (card.getBoundingClientRect().width + gap) + loop) % loop;
-        interacting = true;
-        clearTimeout(resumeTimer);
-        marquee.scrollTo({ left: target, behavior: motionPreference.matches ? "auto" : "smooth" });
+        lastInteraction = performance.now();
+        // Instant step: a smooth glide visibly moves the row against the ambient drift
+        marquee.scrollLeft = target;
         if (event.detail > 0) button.blur(); // pointer clicks keep focus and would pause the loop forever
-        resumeTimer = setTimeout(() => { interacting = false; }, 1200);
       });
     });
     document.addEventListener("visibilitychange", () => { lastFrame = 0; });
@@ -295,6 +281,57 @@ if (finePointer && !reducedMotion) {
   const img = $("#lb-img");
   const cap = $("#lb-cap");
   const galleries = $$(".gallery-grid");
+  // Measured intrinsic dimensions so cards get their final size before any image loads —
+  // loading then changes pixels only, never layout (no shift, no flicker).
+  const GALLERY_DIMS = {
+    "1759894941779_Firefly 20251008091218.png.jpg.png": [3072, 4080],
+    "AT DU CONFERENCE.jpg": [3072, 4080],
+    "AT GOLDEN BEACH PURI.jpg": [1200, 1600],
+    "AT MOES.jpg": [6144, 8160],
+    "At Ministry of Environment, Forest and Climate Change of India.jpg": [6144, 8160],
+    "CMA HEAD OFFICE, NEW DELHI.jpg": [3072, 4080],
+    "Cartographic analysis, niu.jpg": [905, 597],
+    "Conducting Filed Survey in Okhla Bird Sanctuary.png": [1783, 1288],
+    "DU CONFERECE PRESENTATION.png": [720, 896],
+    "DU CONFERENCE.JPG": [6000, 4000],
+    "Dr. Raghunath Pal Survey Okhla Bird Sanctuary.png": [1818, 1363],
+    "Dr. Vikram Singh, Former DGP, Uttar Pradesh CONVOCATION DEGREE.jpg": [606, 1236],
+    "GOLDEN BEACH, PURI.jpg": [1200, 1600],
+    "Gangtok, Sikkim.JPG": [1280, 960],
+    "GROUP PHOTO DU CONFERENCE.JPG": [5712, 4284],
+    "ICAI HEAD OFFICE, NEW DELHI.jpg": [2919, 3877],
+    "IMD.jpg": [6144, 8160],
+    "IMG_20251006_170530749_HDR.jpg": [3072, 4080],
+    "IMG_20260324_155737156_HDR.jpg": [3072, 4080],
+    "JNU CONFERENCE.jpg": [3072, 4080],
+    "JOB FAIR DU.jpg": [3072, 4080],
+    "Kalindi college, DU HOD - Dr. Seema Shadev and professor Dr. Geeta Kumari.jpg": [3000, 4000],
+    "Lab Dress.jpg": [720, 1061],
+    "Lecture Room NIU.jpg": [1000, 750],
+    "Mahanadi River, Cuttack District, Odisha.jpg": [1600, 1200],
+    "Ministry of Environment, Forest and Climate Change of India.jpg": [6144, 8160],
+    "Minstry of Earth Science - IMD.jpg": [8160, 6144],
+    "MOES.jpg": [8160, 6144],
+    "NIU CONVOCATION.jpg": [1200, 1600],
+    "NIU DEGREE.jpg": [1200, 1600],
+    "NIU GIS ANALYSIS GEO LAB.jpg": [1200, 1600],
+    "NIU LAB SATELLITE IMAGE INTERPETATION.jpg": [958, 1280],
+    "Noida International University.jpg": [3120, 4160],
+    "Prof. B.W. Pandey, director, center for himalayan studies, DU.jpg": [1813, 3376],
+    "Prof. Ilora Ghosh.jpg": [2630, 3904],
+    "Prof. Kasturi Mukhopadhyay, JNU.jpg": [3072, 4080],
+    "Prof. Muduru Lachhana Dora, Former Director General, GSI, New Delhi & Dr. Dhananjai Pandey, Scientist -G, NCPOR, Goa.jpg": [4080, 3072],
+    "Prof. Satish Chandra Garkoti, JNU.jpg": [3072, 4080],
+    "Ranchi.jpg": [1200, 1600],
+    "Sikkim Geographical Tour, NIU,Banjhakri Water Falls - Gangtok WITH DR. MALINI PRAVE SETHI AND VINEET CHANDAN.JPG": [4032, 3024],
+    "Socio-Economic Survey, Yaktin Village, Sikkim.jpg": [1032, 774],
+    "Stereoscopy Anlysis niu lab.jpg": [1600, 1200],
+    "Study Room.png": [1184, 864],
+    "Survey conducted along Village located on bank of mahanadi river to monitor river health.jpg": [1600, 1200],
+    "Tree Plantation Dr. Raghunath Pal, Dr. Deepak Katariya and Dr. Moin Khan.jpg": [813, 576],
+    "Water Quality Analysis of Mahanadi River, Cuttack District, Odisha.jpg": [1200, 1600],
+    "chemistry lab niu.jpg": [1920, 4160],
+  };
   const academicCollection = [
     ["1759894941779_Firefly 20251008091218.png.jpg.png", "JNU International Conference 2025"],
     ["AT DU CONFERENCE.jpg", "At the Delhi University Conference"],
@@ -356,6 +393,8 @@ if (finePointer && !reducedMotion) {
       photo.alt = title;
       photo.loading = "lazy";
       photo.decoding = "async";
+      const dims = GALLERY_DIMS[file];
+      if (dims) { photo.width = dims[0]; photo.height = dims[1]; }
       const caption = document.createElement("figcaption");
       const heading = document.createElement("b");
       heading.textContent = title;
@@ -396,11 +435,15 @@ if (finePointer && !reducedMotion) {
       const maxHeight = window.matchMedia("(max-width: 640px)").matches ? 220
         : window.matchMedia("(max-width: 900px)").matches ? 270 : 310;
       photoPairs.forEach(([photo, clone]) => {
-        if (!photo.naturalWidth || !photo.naturalHeight) return;
-        const scale = Math.min(maxWidth / photo.naturalWidth, maxHeight / photo.naturalHeight);
-        const width = Math.round(photo.naturalWidth * scale);
-        const height = Math.round(photo.naturalHeight * scale);
-        const portrait = photo.naturalHeight > photo.naturalWidth * 1.1;
+        // Fall back to the width/height attributes so cards are sized from the
+        // first frame, before their image finishes loading
+        const natW = photo.naturalWidth || +photo.getAttribute("width") || 0;
+        const natH = photo.naturalHeight || +photo.getAttribute("height") || 0;
+        if (!natW || !natH) return;
+        const scale = Math.min(maxWidth / natW, maxHeight / natH);
+        const width = Math.round(natW * scale);
+        const height = Math.round(natH * scale);
+        const portrait = natH > natW * 1.1;
         [photo, clone].forEach((image) => {
           const card = image.closest(".g-item");
           card.style.setProperty("--photo-width", `${width}px`);
@@ -415,16 +458,15 @@ if (finePointer && !reducedMotion) {
     window.addEventListener("resize", sizePhotoCards, { passive: true });
     sizePhotoCards();
 
-    let hovered = false;
-    let focused = false;
-    let interacting = false;
+    let lastInteraction = 0;
     let lastFrame = 0;
-    let resumeTimer;
     let animationFrame;
+    const INTERACTION_HOLD = 800;
 
     function isMarqueePaused() {
-      return hovered || focused || interacting || document.hidden || motionPreference.matches ||
-        lb.classList.contains("open");
+      return document.hidden || motionPreference.matches ||
+        lb.classList.contains("open") ||
+        performance.now() - lastInteraction < INTERACTION_HOLD;
     }
     function animateMarquee(timestamp) {
       if (!lastFrame) lastFrame = timestamp;
@@ -441,21 +483,9 @@ if (finePointer && !reducedMotion) {
         animationFrame = requestAnimationFrame(animateMarquee);
       }
     }
-    shell.addEventListener("pointerenter", () => { hovered = true; });
-    shell.addEventListener("pointerleave", () => { hovered = false; });
-    shell.addEventListener("focusin", () => { focused = true; });
-    shell.addEventListener("focusout", (event) => {
-      focused = shell.contains(event.relatedTarget);
-    });
-    shell.addEventListener("pointerdown", () => {
-      interacting = true;
-      clearTimeout(resumeTimer);
-    });
+    shell.addEventListener("pointerdown", () => { lastInteraction = performance.now(); });
     ["pointerup", "pointercancel"].forEach((eventName) => {
-      shell.addEventListener(eventName, () => {
-        clearTimeout(resumeTimer);
-        resumeTimer = setTimeout(() => { interacting = false; }, 1400);
-      });
+      shell.addEventListener(eventName, () => { lastInteraction = performance.now(); });
     });
     shell.querySelectorAll(".marquee-arrow").forEach((button) => {
       button.addEventListener("click", () => {
@@ -465,11 +495,10 @@ if (finePointer && !reducedMotion) {
         const direction = button.classList.contains("marquee-arrow--prev") ? -1 : 1;
         const loop = gallery.scrollWidth;
         const target = (marquee.scrollLeft + direction * (card.getBoundingClientRect().width + gap) + loop) % loop;
-        interacting = true;
-        clearTimeout(resumeTimer);
-        marquee.scrollTo({ left: target, behavior: motionPreference.matches ? "auto" : "smooth" });
+        lastInteraction = performance.now();
+        // Instant step: a smooth glide visibly moves the row against the ambient drift
+        marquee.scrollLeft = target;
         if (event.detail > 0) button.blur(); // pointer clicks keep focus and would pause the loop forever
-        resumeTimer = setTimeout(() => { interacting = false; }, 1400);
       });
     });
     document.addEventListener("visibilitychange", () => { lastFrame = 0; });

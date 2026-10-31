@@ -199,112 +199,111 @@ if (finePointer && !reducedMotion) {
 }
 
 /* ── Gallery lightbox ─────────────────────────────────────── */
-(function researchMarquee() {
-  const shell = $(".research-marquee-shell");
-  const marquee = $(".research-marquee");
-  const track = $(".research-track");
-  const sequence = $(".research-sequence");
-  if (!shell || !marquee || !track || !sequence) return;
-
-  const clone = sequence.cloneNode(true);
-  clone.classList.add("research-sequence--clone");
-  clone.setAttribute("aria-hidden", "true");
-  clone.querySelectorAll(".reveal, .reveal-left, .reveal-right, .reveal-zoom, .tilt")
-    .forEach((card) => card.classList.remove("reveal", "reveal-left", "reveal-right", "reveal-zoom", "tilt"));
-  track.append(clone);
-
+(function researchMarquees() {
   const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
-  let hovered = false;
-  let focused = false;
-  let interacting = false;
-  let lastFrame = 0;
-  let resumeTimer;
-  let animationFrame = 0;
 
-  function isPaused() {
-    return hovered || focused || interacting || document.hidden || motionPreference.matches;
-  }
-  function animate(timestamp) {
-    if (!lastFrame) lastFrame = timestamp;
-    const elapsed = Math.min(timestamp - lastFrame, 64);
-    lastFrame = timestamp;
+  $$(".research-marquee-shell").forEach((shell) => {
+    const marquee = shell.querySelector(".research-marquee");
+    const track = shell.querySelector(".research-track");
+    const sequence = shell.querySelector(".research-sequence");
+    if (!marquee || !track || !sequence) return;
+
     const loopLength = sequence.scrollWidth;
-    if (!isPaused() && loopLength > 0) {
-      marquee.scrollLeft = (marquee.scrollLeft + elapsed * 0.045) % loopLength;
+    const copies = loopLength > 0 ? Math.max(1, Math.ceil(marquee.clientWidth / loopLength)) : 1;
+    for (let i = 0; i < copies; i++) {
+      const clone = sequence.cloneNode(true);
+      clone.classList.add("research-sequence--clone");
+      clone.setAttribute("aria-hidden", "true");
+      clone.querySelectorAll(".reveal, .reveal-left, .reveal-right, .reveal-zoom, .tilt")
+        .forEach((card) => card.classList.remove("reveal", "reveal-left", "reveal-right", "reveal-zoom", "tilt"));
+      track.append(clone);
     }
-    animationFrame = requestAnimationFrame(animate);
-  }
-  function start() {
-    if (!motionPreference.matches && !animationFrame) {
+
+    let hovered = false;
+    let focused = false;
+    let interacting = false;
+    let lastFrame = 0;
+    let resumeTimer;
+    let animationFrame = 0;
+
+    function isPaused() {
+      return hovered || focused || interacting || document.hidden || motionPreference.matches;
+    }
+    function animate(timestamp) {
+      if (!lastFrame) lastFrame = timestamp;
+      const elapsed = Math.min(timestamp - lastFrame, 64);
+      lastFrame = timestamp;
+      const loop = sequence.scrollWidth;
+      if (!isPaused() && loop > 0) {
+        marquee.scrollLeft = (marquee.scrollLeft - elapsed * 0.045 + loop) % loop;
+      }
       animationFrame = requestAnimationFrame(animate);
     }
-  }
+    function start() {
+      if (!motionPreference.matches && !animationFrame) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    }
 
-  shell.addEventListener("pointerenter", () => { hovered = true; });
-  shell.addEventListener("pointerleave", () => { hovered = false; });
-  shell.addEventListener("focusin", () => { focused = true; });
-  shell.addEventListener("focusout", (event) => {
-    focused = shell.contains(event.relatedTarget);
-  });
-  shell.addEventListener("pointerdown", () => {
-    interacting = true;
-    clearTimeout(resumeTimer);
-  });
-  ["pointerup", "pointercancel"].forEach((eventName) => {
-    shell.addEventListener(eventName, () => {
-      clearTimeout(resumeTimer);
-      resumeTimer = setTimeout(() => { interacting = false; }, 1200);
+    shell.addEventListener("pointerenter", () => { hovered = true; });
+    shell.addEventListener("pointerleave", () => { hovered = false; });
+    shell.addEventListener("focusin", () => { focused = true; });
+    shell.addEventListener("focusout", (event) => {
+      focused = shell.contains(event.relatedTarget);
     });
-  });
-  shell.querySelectorAll(".marquee-arrow").forEach((button) => {
-    button.addEventListener("click", () => {
-      const card = sequence.firstElementChild;
-      if (!card) return;
-      const gap = Number.parseFloat(getComputedStyle(sequence).gap) || 0;
-      const direction = button.classList.contains("marquee-arrow--prev") ? -1 : 1;
-      const loopLength = sequence.scrollWidth;
-      const target = (marquee.scrollLeft + direction * (card.getBoundingClientRect().width + gap) + loopLength) % loopLength;
+    shell.addEventListener("pointerdown", () => {
       interacting = true;
       clearTimeout(resumeTimer);
-      marquee.scrollTo({ left: target, behavior: motionPreference.matches ? "auto" : "smooth" });
-      resumeTimer = setTimeout(() => { interacting = false; }, 1200);
     });
+    ["pointerup", "pointercancel"].forEach((eventName) => {
+      shell.addEventListener(eventName, () => {
+        clearTimeout(resumeTimer);
+        resumeTimer = setTimeout(() => { interacting = false; }, 1200);
+      });
+    });
+    shell.querySelectorAll(".marquee-arrow").forEach((button) => {
+      button.addEventListener("click", () => {
+        const card = sequence.firstElementChild;
+        if (!card) return;
+        const gap = Number.parseFloat(getComputedStyle(sequence).gap) || 0;
+        const direction = button.classList.contains("marquee-arrow--prev") ? -1 : 1;
+        const loop = sequence.scrollWidth;
+        const target = (marquee.scrollLeft + direction * (card.getBoundingClientRect().width + gap) + loop) % loop;
+        interacting = true;
+        clearTimeout(resumeTimer);
+        marquee.scrollTo({ left: target, behavior: motionPreference.matches ? "auto" : "smooth" });
+        if (event.detail > 0) button.blur(); // pointer clicks keep focus and would pause the loop forever
+        resumeTimer = setTimeout(() => { interacting = false; }, 1200);
+      });
+    });
+    document.addEventListener("visibilitychange", () => { lastFrame = 0; });
+    motionPreference.addEventListener("change", () => {
+      lastFrame = 0;
+      if (motionPreference.matches) {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = 0;
+      } else {
+        start();
+      }
+    });
+    start();
   });
-  document.addEventListener("visibilitychange", () => { lastFrame = 0; });
-  motionPreference.addEventListener("change", () => {
-    lastFrame = 0;
-    if (motionPreference.matches) {
-      cancelAnimationFrame(animationFrame);
-      animationFrame = 0;
-    } else {
-      start();
-    }
-  });
-  start();
 })();
 
 (function lightbox() {
   const lb = $("#lightbox");
   const img = $("#lb-img");
   const cap = $("#lb-cap");
-  const gallery = $(".gallery-grid");
-  let photoItems = [];
-  const photoCollection = [
+  const galleries = $$(".gallery-grid");
+  const academicCollection = [
     ["1759894941779_Firefly 20251008091218.png.jpg.png", "JNU International Conference 2025"],
     ["AT DU CONFERENCE.jpg", "At the Delhi University Conference"],
-    ["AT GOLDEN BEACH PURI.jpg", "Golden Beach, Puri"],
     ["At Ministry of Environment, Forest and Climate Change of India.jpg", "At the Ministry of Environment, Forest and Climate Change"],
     ["AT MOES.jpg", "At the Ministry of Earth Sciences"],
-    ["Cartographic analysis, niu.jpg", "Cartographic Analysis · NIU"],
-    ["chemistry lab niu.jpg", "Chemistry Laboratory · NIU"],
     ["CMA HEAD OFFICE, NEW DELHI.jpg", "CMA Head Office · New Delhi"],
-    ["Conducting Filed Survey in Okhla Bird Sanctuary.png", "Field Survey · Okhla Bird Sanctuary"],
-    ["Dr. Raghunath Pal Survey Okhla Bird Sanctuary.png", "Okhla Bird Sanctuary Survey with Dr. Raghunath Pal"],
     ["Dr. Vikram Singh, Former DGP, Uttar Pradesh CONVOCATION DEGREE.jpg", "Convocation with Dr. Vikram Singh"],
     ["DU CONFERECE PRESENTATION.png", "Research Presentation · Delhi University"],
     ["DU CONFERENCE.JPG", "Delhi University Conference"],
-    ["Gangtok, Sikkim.JPG", "Geographical Field Trip · Gangtok, Sikkim"],
-    ["GOLDEN BEACH, PURI.jpg", "Golden Beach, Puri"],
     ["GROUP PHOTO DU CONFERENCE.JPG", "Conference Gathering · Delhi University"],
     ["ICAI HEAD OFFICE, NEW DELHI.jpg", "ICAI Head Office · New Delhi"],
     ["IMD.jpg", "IMD Head Office, New Delhi"],
@@ -313,160 +312,178 @@ if (finePointer && !reducedMotion) {
     ["JNU CONFERENCE.jpg", "Conference at Jawaharlal Nehru University"],
     ["JOB FAIR DU.jpg", "Job Fair · Delhi University · Vriti 26"],
     ["Kalindi college, DU HOD - Dr. Seema Shadev and professor Dr. Geeta Kumari.jpg", "With Faculty · Kalindi College, Delhi University"],
-    ["Lab Dress.jpg", "Laboratory Work"],
     ["Lecture Room NIU.jpg", "Lecture Room · NIU"],
-    ["Mahanadi River, Cuttack District, Odisha.jpg", "Mahanadi River · Cuttack, Odisha"],
     ["Ministry of Environment, Forest and Climate Change of India.jpg", "Ministry of Environment, Forest and Climate Change"],
     ["Minstry of Earth Science - IMD.jpg", "Ministry of Earth Sciences · India Meteorological Department"],
     ["MOES.jpg", "Ministry of Earth Sciences"],
     ["NIU CONVOCATION.jpg", "Convocation · Noida International University"],
     ["NIU DEGREE.jpg", "Degree Ceremony · Noida International University"],
-    ["NIU GIS ANALYSIS GEO LAB.jpg", "GIS Analysis · Geospatial Laboratory, NIU"],
-    ["NIU LAB SATELLITE IMAGE INTERPETATION.jpg", "Satellite Image Interpretation · NIU"],
     ["Noida International University.jpg", "Noida International University"],
     ["Prof. B.W. Pandey, director, center for himalayan studies, DU.jpg", "With Prof. B. W. Pandey · Delhi University"],
     ["Prof. Ilora Ghosh.jpg", "With Prof. Ilora Ghosh · JNU"],
     ["Prof. Kasturi Mukhopadhyay, JNU.jpg", "With Prof. Kasturi Mukhopadhyay · JNU"],
     ["Prof. Muduru Lachhana Dora, Former Director General, GSI, New Delhi & Dr. Dhananjai Pandey, Scientist -G, NCPOR, Goa.jpg", "With GSI and NCPOR Scientists · New Delhi"],
     ["Prof. Satish Chandra Garkoti, JNU.jpg", "With Prof. Satish Chandra Garkoti · JNU"],
+    ["Study Room.png", "Study Space"],
+  ];
+  const fieldCollection = [
+    ["AT GOLDEN BEACH PURI.jpg", "Golden Beach, Puri"],
+    ["Cartographic analysis, niu.jpg", "Cartographic Analysis · NIU"],
+    ["chemistry lab niu.jpg", "Chemistry Laboratory · NIU"],
+    ["Conducting Filed Survey in Okhla Bird Sanctuary.png", "Field Survey · Okhla Bird Sanctuary"],
+    ["Dr. Raghunath Pal Survey Okhla Bird Sanctuary.png", "Okhla Bird Sanctuary Survey with Dr. Raghunath Pal"],
+    ["Gangtok, Sikkim.JPG", "Geographical Field Trip · Gangtok, Sikkim"],
+    ["GOLDEN BEACH, PURI.jpg", "Golden Beach, Puri"],
+    ["Lab Dress.jpg", "Laboratory Work"],
+    ["Mahanadi River, Cuttack District, Odisha.jpg", "Mahanadi River · Cuttack, Odisha"],
+    ["NIU GIS ANALYSIS GEO LAB.jpg", "GIS Analysis · Geospatial Laboratory, NIU"],
+    ["NIU LAB SATELLITE IMAGE INTERPETATION.jpg", "Satellite Image Interpretation · NIU"],
     ["Ranchi.jpg", "Ranchi · Field Visit"],
     ["Sikkim Geographical Tour, NIU,Banjhakri Water Falls - Gangtok WITH DR. MALINI PRAVE SETHI AND VINEET CHANDAN.JPG", "Geographical Tour · Banjhakri Falls, Gangtok"],
     ["Stereoscopy Anlysis niu lab.jpg", "Stereoscopic Analysis · NIU Laboratory"],
-    ["Study Room.png", "Study Space"],
     ["Socio-Economic Survey, Yaktin Village, Sikkim.jpg", "Socio-Economic Survey · Yaktin Village, Sikkim"],
     ["Survey conducted along Village located on bank of mahanadi river to monitor river health.jpg", "River Health Survey · Mahanadi Riverbank"],
     ["Tree Plantation Dr. Raghunath Pal, Dr. Deepak Katariya and Dr. Moin Khan.jpg", "Tree Plantation with Dr. Raghunath Pal, Dr. Deepak Katariya and Dr. Moin Khan"],
     ["Water Quality Analysis of Mahanadi River, Cuttack District, Odisha.jpg", "Water Quality Analysis · Mahanadi River, Odisha"],
   ];
-  if (gallery) {
-  photoCollection.forEach(([file, title]) => {
-    const figure = document.createElement("figure");
-    figure.className = "g-item";
-    const photo = document.createElement("img");
-    photo.src = `photos/${encodeURIComponent(file)}`;
-    photo.alt = title;
-    photo.loading = "lazy";
-    photo.decoding = "async";
-    const caption = document.createElement("figcaption");
-    const heading = document.createElement("b");
-    heading.textContent = title;
-    caption.append(heading);
-    figure.append(photo, caption);
-    gallery.append(figure);
-  });
-  photoItems = [...gallery.querySelectorAll(".g-item")];
-  const galleryTrack = $(".gallery-track");
-  const galleryClone = gallery.cloneNode(true);
-  galleryClone.classList.add("gallery-sequence--clone");
-  galleryClone.setAttribute("aria-hidden", "true");
-  galleryClone.querySelectorAll(".g-item").forEach((figure) => {
-    figure.classList.remove("reveal", "reveal-zoom");
-    figure.removeAttribute("role");
-    figure.removeAttribute("tabindex");
-    figure.removeAttribute("aria-label");
-  });
-  galleryClone.querySelectorAll("img").forEach((photo) => { photo.alt = ""; });
-  galleryTrack.append(galleryClone);
-  const galleryPhotos = [...gallery.querySelectorAll("img")];
-  const clonedPhotos = [...galleryClone.querySelectorAll("img")];
-  const photoPairs = galleryPhotos.map((photo, index) => [photo, clonedPhotos[index]]);
-  function sizePhotoCards() {
-    const maxWidth = window.matchMedia("(max-width: 380px)").matches ? 205
-      : window.matchMedia("(max-width: 640px)").matches ? 270
-        : window.matchMedia("(max-width: 900px)").matches ? 330 : 390;
-    const maxHeight = window.matchMedia("(max-width: 640px)").matches ? 220
-      : window.matchMedia("(max-width: 900px)").matches ? 270 : 310;
-    photoPairs.forEach(([photo, clone]) => {
-      if (!photo.naturalWidth || !photo.naturalHeight) return;
-      const scale = Math.min(maxWidth / photo.naturalWidth, maxHeight / photo.naturalHeight);
-      const width = Math.round(photo.naturalWidth * scale);
-      const height = Math.round(photo.naturalHeight * scale);
-      const portrait = photo.naturalHeight > photo.naturalWidth * 1.1;
-      [photo, clone].forEach((image) => {
-        const card = image.closest(".g-item");
-        card.style.setProperty("--photo-width", `${width}px`);
-        card.style.setProperty("--photo-height", `${height}px`);
-        card.classList.toggle("g-item--portrait", portrait);
-      });
+
+  function appendPhotos(sequence, collection) {
+    collection.forEach(([file, title]) => {
+      const figure = document.createElement("figure");
+      figure.className = "g-item";
+      const photo = document.createElement("img");
+      photo.src = `photos/${encodeURIComponent(file)}`;
+      photo.alt = title;
+      photo.loading = "lazy";
+      photo.decoding = "async";
+      const caption = document.createElement("figcaption");
+      const heading = document.createElement("b");
+      heading.textContent = title;
+      caption.append(heading);
+      figure.append(photo, caption);
+      sequence.append(figure);
     });
   }
-  galleryPhotos.forEach((photo) => {
-    if (!photo.complete) photo.addEventListener("load", sizePhotoCards, { once: true });
-  });
-  window.addEventListener("resize", sizePhotoCards, { passive: true });
-  sizePhotoCards();
-
-  const shell = $(".gallery-marquee-shell");
-  const marquee = $(".gallery-marquee");
+  if (galleries[0]) appendPhotos(galleries[0], academicCollection);
+  if (galleries[1]) appendPhotos(galleries[1], fieldCollection);
+  const photoItems = galleries.flatMap((g) => [...g.querySelectorAll(".g-item")]);
   const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
-  let hovered = false;
-  let focused = false;
-  let interacting = false;
-  let lastFrame = 0;
-  let resumeTimer;
-  let animationFrame;
 
-  function isMarqueePaused() {
-    return hovered || focused || interacting || document.hidden || motionPreference.matches ||
-      $("#lightbox").classList.contains("open");
-  }
-  function animateMarquee(timestamp) {
-    if (!lastFrame) lastFrame = timestamp;
-    const elapsed = Math.min(timestamp - lastFrame, 64);
-    lastFrame = timestamp;
-    const loopLength = gallery.scrollWidth;
-    if (!isMarqueePaused() && loopLength > 0) {
-      marquee.scrollLeft = (marquee.scrollLeft + elapsed * 0.055) % loopLength;
+  galleries.forEach((gallery) => {
+    const galleryTrack = gallery.closest(".gallery-track");
+    const shell = gallery.closest(".gallery-marquee-shell");
+    const marquee = shell ? shell.querySelector(".gallery-marquee") : null;
+    if (!galleryTrack || !shell || !marquee) return;
+
+    const galleryClone = gallery.cloneNode(true);
+    galleryClone.classList.add("gallery-sequence--clone");
+    galleryClone.setAttribute("aria-hidden", "true");
+    galleryClone.querySelectorAll(".g-item").forEach((figure) => {
+      figure.classList.remove("reveal", "reveal-zoom");
+      figure.removeAttribute("role");
+      figure.removeAttribute("tabindex");
+      figure.removeAttribute("aria-label");
+    });
+    galleryClone.querySelectorAll("img").forEach((photo) => { photo.alt = ""; });
+    galleryTrack.append(galleryClone);
+    const galleryPhotos = [...gallery.querySelectorAll("img")];
+    const clonedPhotos = [...galleryClone.querySelectorAll("img")];
+    const photoPairs = galleryPhotos.map((photo, index) => [photo, clonedPhotos[index]]);
+    function sizePhotoCards() {
+      const maxWidth = window.matchMedia("(max-width: 380px)").matches ? 205
+        : window.matchMedia("(max-width: 640px)").matches ? 270
+          : window.matchMedia("(max-width: 900px)").matches ? 330 : 390;
+      const maxHeight = window.matchMedia("(max-width: 640px)").matches ? 220
+        : window.matchMedia("(max-width: 900px)").matches ? 270 : 310;
+      photoPairs.forEach(([photo, clone]) => {
+        if (!photo.naturalWidth || !photo.naturalHeight) return;
+        const scale = Math.min(maxWidth / photo.naturalWidth, maxHeight / photo.naturalHeight);
+        const width = Math.round(photo.naturalWidth * scale);
+        const height = Math.round(photo.naturalHeight * scale);
+        const portrait = photo.naturalHeight > photo.naturalWidth * 1.1;
+        [photo, clone].forEach((image) => {
+          const card = image.closest(".g-item");
+          card.style.setProperty("--photo-width", `${width}px`);
+          card.style.setProperty("--photo-height", `${height}px`);
+          card.classList.toggle("g-item--portrait", portrait);
+        });
+      });
     }
-    animationFrame = requestAnimationFrame(animateMarquee);
-  }
-  function startMarquee() {
-    if (!motionPreference.matches && !animationFrame) {
+    galleryPhotos.forEach((photo) => {
+      if (!photo.complete) photo.addEventListener("load", sizePhotoCards, { once: true });
+    });
+    window.addEventListener("resize", sizePhotoCards, { passive: true });
+    sizePhotoCards();
+
+    let hovered = false;
+    let focused = false;
+    let interacting = false;
+    let lastFrame = 0;
+    let resumeTimer;
+    let animationFrame;
+
+    function isMarqueePaused() {
+      return hovered || focused || interacting || document.hidden || motionPreference.matches ||
+        lb.classList.contains("open");
+    }
+    function animateMarquee(timestamp) {
+      if (!lastFrame) lastFrame = timestamp;
+      const elapsed = Math.min(timestamp - lastFrame, 64);
+      lastFrame = timestamp;
+      const loop = gallery.scrollWidth;
+      if (!isMarqueePaused() && loop > 0) {
+        marquee.scrollLeft = (marquee.scrollLeft - elapsed * 0.055 + loop) % loop;
+      }
       animationFrame = requestAnimationFrame(animateMarquee);
     }
-  }
-  shell.addEventListener("pointerenter", () => { hovered = true; });
-  shell.addEventListener("pointerleave", () => { hovered = false; });
-  shell.addEventListener("focusin", () => { focused = true; });
-  shell.addEventListener("focusout", (event) => {
-    focused = shell.contains(event.relatedTarget);
-  });
-  shell.addEventListener("pointerdown", () => {
-    interacting = true;
-    clearTimeout(resumeTimer);
-  });
-  ["pointerup", "pointercancel"].forEach((eventName) => {
-    shell.addEventListener(eventName, () => {
-      clearTimeout(resumeTimer);
-      resumeTimer = setTimeout(() => { interacting = false; }, 1400);
+    function startMarquee() {
+      if (!motionPreference.matches && !animationFrame) {
+        animationFrame = requestAnimationFrame(animateMarquee);
+      }
+    }
+    shell.addEventListener("pointerenter", () => { hovered = true; });
+    shell.addEventListener("pointerleave", () => { hovered = false; });
+    shell.addEventListener("focusin", () => { focused = true; });
+    shell.addEventListener("focusout", (event) => {
+      focused = shell.contains(event.relatedTarget);
     });
-  });
-  shell.querySelectorAll(".marquee-arrow").forEach((button) => {
-    button.addEventListener("click", () => {
-      const card = gallery.firstElementChild;
-      if (!card) return;
-      const gap = Number.parseFloat(getComputedStyle(gallery).gap) || 0;
-      const direction = button.classList.contains("marquee-arrow--prev") ? -1 : 1;
-      const loopLength = gallery.scrollWidth;
-      const target = (marquee.scrollLeft + direction * (card.getBoundingClientRect().width + gap) + loopLength) % loopLength;
+    shell.addEventListener("pointerdown", () => {
       interacting = true;
       clearTimeout(resumeTimer);
-      marquee.scrollTo({ left: target, behavior: motionPreference.matches ? "auto" : "smooth" });
-      resumeTimer = setTimeout(() => { interacting = false; }, 1400);
     });
+    ["pointerup", "pointercancel"].forEach((eventName) => {
+      shell.addEventListener(eventName, () => {
+        clearTimeout(resumeTimer);
+        resumeTimer = setTimeout(() => { interacting = false; }, 1400);
+      });
+    });
+    shell.querySelectorAll(".marquee-arrow").forEach((button) => {
+      button.addEventListener("click", () => {
+        const card = gallery.firstElementChild;
+        if (!card) return;
+        const gap = Number.parseFloat(getComputedStyle(gallery).gap) || 0;
+        const direction = button.classList.contains("marquee-arrow--prev") ? -1 : 1;
+        const loop = gallery.scrollWidth;
+        const target = (marquee.scrollLeft + direction * (card.getBoundingClientRect().width + gap) + loop) % loop;
+        interacting = true;
+        clearTimeout(resumeTimer);
+        marquee.scrollTo({ left: target, behavior: motionPreference.matches ? "auto" : "smooth" });
+        if (event.detail > 0) button.blur(); // pointer clicks keep focus and would pause the loop forever
+        resumeTimer = setTimeout(() => { interacting = false; }, 1400);
+      });
+    });
+    document.addEventListener("visibilitychange", () => { lastFrame = 0; });
+    motionPreference.addEventListener("change", () => {
+      lastFrame = 0;
+      if (motionPreference.matches) {
+        cancelAnimationFrame(animationFrame);
+        animationFrame = 0;
+      } else {
+        startMarquee();
+      }
+    });
+    startMarquee();
   });
-  document.addEventListener("visibilitychange", () => { lastFrame = 0; });
-  motionPreference.addEventListener("change", () => {
-    lastFrame = 0;
-    if (motionPreference.matches) {
-      cancelAnimationFrame(animationFrame);
-      animationFrame = 0;
-    } else {
-      startMarquee();
-    }
-  });
-  startMarquee();
-  }
 
   const certificateCollection = [
     ["Central University of Karanataka 21 Days Online Training Programme using QGIS Certificate_page-0001.jpg", "21-Day Online GIS Training Using QGIS · Central University of Karnataka", "2020"],

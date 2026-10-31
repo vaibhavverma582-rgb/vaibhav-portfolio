@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=28">
+  <link rel="stylesheet" href="css/style.css?v=38">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -37,13 +37,15 @@
           <span class="sec-line"></span>
         </div>
 
-        <div class="marquee-shell research-marquee-shell">
-          <button class="marquee-arrow marquee-arrow--prev" type="button" aria-label="Scroll research cards left" aria-controls="research-marquee">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-          </button>
-          <div class="research-marquee" id="research-marquee" role="region" aria-label="Research and conference cards" tabindex="0">
-            <div class="research-track">
-              <div class="research-sequence">
+        <div class="research-block">
+          <h3 class="marquee-label reveal">Research Publications</h3>
+          <div class="marquee-shell research-marquee-shell">
+            <button class="marquee-arrow marquee-arrow--prev" type="button" aria-label="Scroll research cards left" aria-controls="research-marquee-pubs">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <div class="research-marquee" id="research-marquee-pubs" role="region" aria-label="Research publication cards" tabindex="0">
+              <div class="research-track">
+                <div class="research-sequence">
           <article class="pub-card reveal tilt" style="--d:.05s">
             <div class="pub-top">
               <span class="pub-badge">Under Review · Scopus-Indexed</span>
@@ -76,7 +78,24 @@
             <div class="pub-line"></div>
             <p class="pub-desc">Linking hydrological risk and water-quality dynamics across the Mahanadi basin for resilience planning.</p>
           </article>
+                </div>
+              </div>
+            </div>
+            <button class="marquee-arrow marquee-arrow--next" type="button" aria-label="Scroll research cards right" aria-controls="research-marquee-pubs">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </div>
+        </div>
 
+        <div class="research-block">
+          <h3 class="marquee-label reveal">Conference Presentations</h3>
+          <div class="marquee-shell research-marquee-shell">
+            <button class="marquee-arrow marquee-arrow--prev" type="button" aria-label="Scroll conference cards left" aria-controls="research-marquee-confs">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <div class="research-marquee" id="research-marquee-confs" role="region" aria-label="Conference presentation cards" tabindex="0">
+              <div class="research-track">
+                <div class="research-sequence">
           <article class="conf-card reveal-left" style="--d:.1s">
             <span class="conf-badge">Oral Presentation</span>
             <h3>&ldquo;Geospatial Indicators for Biodiversity Conservation&rdquo;</h3>
@@ -90,17 +109,18 @@
             <p>International Conference on Climate Change &amp; Sustainable Development · <b>Jawaharlal Nehru University</b></p>
             <span class="conf-date">October 2025</span>
           </article>
+                </div>
               </div>
             </div>
+            <button class="marquee-arrow marquee-arrow--next" type="button" aria-label="Scroll conference cards right" aria-controls="research-marquee-confs">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
           </div>
-          <button class="marquee-arrow marquee-arrow--next" type="button" aria-label="Scroll research cards right" aria-controls="research-marquee">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-          </button>
         </div>
       </div>
     </section>
   </main>
   <script src="js/layout.js?v=1"></script>
-  <script src="js/script.js?v=23"></script>
+  <script src="js/script.js?v=25"></script>
 </body>
 </html>

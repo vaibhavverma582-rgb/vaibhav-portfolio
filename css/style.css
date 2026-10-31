@@ -1228,8 +1228,8 @@ html.js .in { opacity: 1; transform: none; }
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(3, 14, 24, 0.62), rgba(3, 14, 24, 0.72)),
-    linear-gradient(95deg, rgba(3, 14, 24, 0.4), rgba(3, 14, 24, 0.12) 58%, rgba(3, 14, 24, 0.42));
+    linear-gradient(180deg, rgba(3, 14, 24, 0.44), rgba(3, 14, 24, 0.56)),
+    linear-gradient(95deg, rgba(3, 14, 24, 0.26), rgba(3, 14, 24, 0.08) 58%, rgba(3, 14, 24, 0.3));
 }
 .home-page > .hero,
 .home-page > .section,

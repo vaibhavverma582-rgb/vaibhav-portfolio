@@ -1281,8 +1281,7 @@ html.js .in { opacity: 1; transform: none; }
 .home-page .home-pathway-label,
 .home-page .home-fact-link,
 .home-page .home-section-link,
-.home-page .home-pathway-arrow,
-.home-page .capability-arrow {
+.home-page .home-pathway-arrow {
   color: #6DDCF0;
 }
 .home-page .home-fact { border-color: rgba(200, 230, 239, 0.18); }
@@ -1338,7 +1337,7 @@ html[data-page="home"] #navbar.menu-open .nav-link:hover { color: #6DDCF0; }
   position: relative;
   display: grid;
   min-height: 208px;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
   gap: 18px;
   overflow: hidden;
@@ -1396,17 +1395,6 @@ html[data-page="home"] #navbar.menu-open .nav-link:hover { color: #6DDCF0; }
   color: var(--muted);
   font-size: 0.88rem;
   line-height: 1.7;
-}
-.capability-arrow {
-  color: var(--cyan);
-  font-size: 1.05rem;
-  opacity: 0.55;
-  transform: translate(-2px, 2px);
-  transition: opacity 0.35s, transform 0.35s;
-}
-.capability-description:hover .capability-arrow {
-  opacity: 1;
-  transform: translate(2px, -2px);
 }
 .home-overview-grid {
   display: grid;
@@ -1521,6 +1509,9 @@ html[data-page="home"] #navbar.menu-open .nav-link:hover { color: #6DDCF0; }
   .home-interest-grid, .home-pathway-grid { grid-template-columns: 1fr; }
   .home-interest { min-height: 0; }
   .home-pathway { min-height: 150px; }
+  .home-page > .hero { min-height: 82svh; }
+  .home-page > .section { padding-block: 48px; }
+  .home-page .section-head { margin-bottom: 24px; }
 }
 
 /* ── Reduced motion ───────────────────────────────────────── */
